@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "rename-chat": {
+      "command": "node",
+      "args": [
+        "REPLACE_WITH_HOME/.cursor/mcp-servers/rename-chat/server.mjs"
+      ]
+    }
+  }
+}

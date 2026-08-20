@@ -1,0 +1,8 @@
+.DS_Store
+node_modules/
+*.log
+chat-titles/
+chat-title-inbox/
+chat-title-queue.jsonl
+chat-title-queue.offset
+*.bak

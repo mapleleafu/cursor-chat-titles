@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterShellExecution": [
+      {
+        "command": "node ./hooks/prefix-pr-chat-title.mjs",
+        "matcher": "gh\\s+pr\\s+create"
+      }
+    ],
+    "postToolUse": [
+      {
+        "command": "node ./hooks/prefix-pr-chat-title.mjs",
+        "matcher": "Shell"
+      }
+    ]
+  }
+}
