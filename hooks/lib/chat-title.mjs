@@ -105,14 +105,6 @@ function sqliteWrite(sql) {
   );
 }
 
-function sqliteWriteFile(key, filePath) {
-  const escapedKey = key.replaceAll("'", "''");
-  const escapedPath = filePath.replaceAll("'", "''");
-  sqliteWrite(
-    `UPDATE cursorDiskKV SET value = readfile('${escapedPath}') WHERE key = '${escapedKey}';`,
-  );
-}
-
 export function getComposerHeader(composerId) {
   if (!composerId || !fs.existsSync(STATE_DB)) {
     return undefined;
@@ -129,50 +121,6 @@ export function getComposerHeader(composerId) {
   } catch (error) {
     log(`getComposerHeader failed: ${error}`);
     return undefined;
-  }
-}
-
-function writeComposerDataName(composerId, title) {
-  const key = `composerData:${composerId}`;
-  let raw;
-  try {
-    raw = sqlite('SELECT value FROM cursorDiskKV WHERE key = ?', [key]);
-  } catch (error) {
-    log(`read composerData failed: ${error}`);
-    return false;
-  }
-  if (!raw) {
-    return false;
-  }
-  let data;
-  try {
-    data = JSON.parse(raw);
-  } catch (error) {
-    log(`parse composerData failed: ${error}`);
-    return false;
-  }
-  if (!data || typeof data !== 'object' || data.name === title) {
-    return data?.name === title;
-  }
-  data.name = title;
-  data.lastUpdatedAt = Date.now();
-  const tmp = path.join(
-    os.tmpdir(),
-    `cursor-composer-name-${composerId}.json`,
-  );
-  try {
-    fs.writeFileSync(tmp, `${JSON.stringify(data)}\n`);
-    sqliteWriteFile(key, tmp);
-    return true;
-  } catch (error) {
-    log(`write composerData failed: ${error}`);
-    return false;
-  } finally {
-    try {
-      fs.unlinkSync(tmp);
-    } catch {
-      // ignore
-    }
   }
 }
 
@@ -255,14 +203,13 @@ export function setComposerName(composerId, title, options = {}) {
     }
     return false;
   }
-  const changed = header.name !== title;
-  writeSticky(composerId, title);
-  if (enqueueMode === 'always' || (enqueueMode === 'if-changed' && changed)) {
-    enqueueRename(composerId, title);
-  }
-  if (!changed) {
-    writeComposerDataName(composerId, title);
+  if (header.name === title) {
+    writeSticky(composerId, title);
     return true;
+  }
+  writeSticky(composerId, title);
+  if (enqueueMode === 'always' || enqueueMode === 'if-changed') {
+    enqueueRename(composerId, title);
   }
   const next = {
     ...header,
@@ -274,12 +221,10 @@ export function setComposerName(composerId, title, options = {}) {
     sqliteWrite(
       `UPDATE composerHeaders SET value = '${payload}', lastUpdatedAt = ${next.lastUpdatedAt} WHERE composerId = '${composerId.replaceAll("'", "''")}';`,
     );
-    writeComposerDataName(composerId, title);
     log(`setComposerName ${composerId} -> ${title}`);
     return true;
   } catch (error) {
     log(`setComposerName failed: ${error}`);
-    writeComposerDataName(composerId, title);
     return false;
   }
 }
@@ -295,7 +240,7 @@ export function applyAllStickyTitles() {
   const items = listStickyTitles();
   let applied = 0;
   for (const item of items) {
-    if (setComposerName(item.composerId, item.title)) {
+    if (setComposerName(item.composerId, item.title, { enqueue: 'never' })) {
       applied += 1;
     }
   }

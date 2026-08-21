@@ -2,7 +2,7 @@
 
 Prefix Cursor agent chat titles with `PR-1234 · topic` when `gh pr create` succeeds.
 
-Cursor stores the live title in memory. This writes the prefixed name to Cursor’s local stores, queues a UI rename, and reapplies it after quit so a full restart picks it up.
+Cursor stores the live title in memory. This writes the prefixed name to `composerHeaders` only, queues a UI rename, and reapplies it after quit. It does not rewrite `composerData`; that path stored blobs and left chats stuck on “Loading chat”.
 
 ## Install
 
